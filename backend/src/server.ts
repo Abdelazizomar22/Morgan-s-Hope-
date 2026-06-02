@@ -224,8 +224,26 @@ if (!isDev) {
     message: { success: false, message: 'Too many auth requests, please try again later.' },
   });
 
+  const registerLimiter = rateLimit({
+    windowMs: 60 * 60 * 1000,
+    max: 10,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { success: false, message: 'Too many registration attempts, please try again later.' },
+  });
+
+  const uploadLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 20,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { success: false, message: 'Too many upload requests, please try again later.' },
+  });
+
   app.use(globalLimiter);
   app.use('/api/auth', authLimiter);
+  app.use('/api/auth/register', registerLimiter);
+  app.use('/api/analysis/upload', uploadLimiter);
 }
 
 app.use(

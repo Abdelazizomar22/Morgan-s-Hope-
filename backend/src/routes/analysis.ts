@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { body, param } from 'express-validator';
 import { authenticate } from '../middleware/auth';
 import upload from '../middleware/upload';
 import {
@@ -54,7 +55,10 @@ const router = Router();
  *       503:
  *         description: AI service unavailable
  */
-router.post('/upload',  authenticate, upload.single('image'), uploadAnalysis);
+router.post('/upload', authenticate, upload.single('image'), [
+  body('imageType').isIn(['xray', 'ct']).withMessage('imageType must be "xray" or "ct"'),
+  body('sessionId').optional().isString().trim(),
+], uploadAnalysis);
 
 /**
  * @openapi
@@ -138,7 +142,7 @@ router.get('/history',  authenticate, getHistory);
  *       404:
  *         description: Analysis not found
  */
-router.get('/:id',      authenticate, getById);
-router.delete('/:id',   authenticate, deleteAnalysis);
+router.get('/:id', authenticate, param('id').isInt().toInt(), getById);
+router.delete('/:id', authenticate, param('id').isInt().toInt(), deleteAnalysis);
 
 export default router;

@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { param } from 'express-validator';
 import { authenticate } from '../middleware/auth';
 import { getAll, getCities, getById } from '../controllers/hospitalController';
 
@@ -105,6 +106,6 @@ router.get('/cities',  authenticate, getCities);
  *       404:
  *         description: Hospital not found
  */
-router.get('/:id',     authenticate, getById);
+router.get('/:id', authenticate, param('id').isInt().toInt(), getById);
 
 export default router;

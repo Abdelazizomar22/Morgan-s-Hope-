@@ -9,11 +9,11 @@ import {
   logout,
   refreshToken,
   me,
-  updateProfile,
-  verifyContact,
+  updateProfile, updateProfileValidators,
+  verifyContact, verifyContactValidators,
   sendPhoneOtp,
-  verifyPhoneOtp,
-  resendVerification,
+  verifyPhoneOtp, verifyPhoneOtpValidators,
+  resendVerification, resendVerificationValidators,
   uploadAvatar,
 } from '../controllers/authController';
 import { authenticate } from '../middleware/auth';
@@ -369,7 +369,7 @@ router.get('/me', authenticate, me);
  *       400:
  *         description: Current password is incorrect
  */
-router.put('/profile', authenticate, updateProfile);
+router.put('/profile', authenticate, updateProfileValidators, updateProfile);
 
 /**
  * @openapi
@@ -402,7 +402,7 @@ router.put('/profile', authenticate, updateProfile);
  *       400:
  *         description: Invalid or expired code
  */
-router.post('/verify-contact', authenticate, verifyContact);
+router.post('/verify-contact', authenticate, verifyContactValidators, verifyContact);
 
 /**
  * @openapi
@@ -463,7 +463,7 @@ router.post('/send-phone-otp', authenticate, sendPhoneOtp);
  *       400:
  *         description: Invalid or expired OTP
  */
-router.post('/verify-phone-otp', authenticate, verifyPhoneOtp);
+router.post('/verify-phone-otp', authenticate, verifyPhoneOtpValidators, verifyPhoneOtp);
 
 /**
  * @openapi
@@ -503,7 +503,7 @@ router.post('/verify-phone-otp', authenticate, verifyPhoneOtp);
  *       400:
  *         description: No contact available for verification
  */
-router.post('/resend-verification', authenticate, resendVerification);
+router.post('/resend-verification', authenticate, resendVerificationValidators, resendVerification);
 
 /**
  * @openapi

@@ -47,6 +47,35 @@ export const loginValidators = [
   }),
 ];
 
+export const updateProfileValidators = [
+  body('firstName').optional().trim().notEmpty().withMessage('First name cannot be empty'),
+  body('lastName').optional().trim().notEmpty().withMessage('Last name cannot be empty'),
+  body('phone').optional().trim(),
+  body('age').optional().isInt({ min: 1, max: 150 }).withMessage('Age must be between 1 and 150'),
+  body('gender').optional().isIn(['male', 'female', 'other']).withMessage('Gender must be male, female, or other'),
+  body('newPassword')
+    .optional()
+    .isLength({ min: 8 }).withMessage('New password must be at least 8 characters')
+    .matches(/[A-Z]/).withMessage('New password must contain at least one uppercase letter')
+    .matches(/[a-z]/).withMessage('New password must contain at least one lowercase letter')
+    .matches(/[0-9]/).withMessage('New password must contain at least one number'),
+  body('currentPassword').if(body('newPassword').exists()).notEmpty().withMessage('Current password is required to set a new password'),
+  body('smokingHistory').optional().trim(),
+  body('medicalHistory').optional().trim(),
+];
+
+export const verifyContactValidators = [
+  body('code').notEmpty().withMessage('Verification code is required').isString().trim(),
+];
+
+export const verifyPhoneOtpValidators = [
+  body('otp').notEmpty().withMessage('OTP is required').isString().trim(),
+];
+
+export const resendVerificationValidators = [
+  body('channel').optional().isIn(['email', 'phone']).withMessage('Channel must be email or phone'),
+];
+
 const devHint =
   process.env.NODE_ENV !== 'production'
     ? ' Open http://localhost:3000/api/auth/dev-setup in browser to create admin (admin@medtech.com / Admin@123456).'
@@ -157,6 +186,16 @@ export const me = asyncHandler(async (req: AuthRequest, res: Response) => {
 });
 
 export const updateProfile = asyncHandler(async (req: AuthRequest, res: Response) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    res.status(422).json({
+      success: false,
+      message: 'Validation failed',
+      errors: errors.array().map(e => ({ field: (e as any).path, message: e.msg })),
+    });
+    return;
+  }
+
   const result = await authService.updateUserProfile(req.user!, {
     firstName: req.body.firstName,
     lastName: req.body.lastName,
@@ -180,6 +219,16 @@ export const updateProfile = asyncHandler(async (req: AuthRequest, res: Response
 });
 
 export const verifyContact = asyncHandler(async (req: AuthRequest, res: Response) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    res.status(422).json({
+      success: false,
+      message: 'Validation failed',
+      errors: errors.array().map(e => ({ field: (e as any).path, message: e.msg })),
+    });
+    return;
+  }
+
   const code = (req.body.code || '').toString().trim();
   const result = await authService.verifyUserContact(req.user!, code);
 
@@ -192,6 +241,12 @@ export const verifyContact = asyncHandler(async (req: AuthRequest, res: Response
 });
 
 export const resendVerification = asyncHandler(async (req: AuthRequest, res: Response) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    res.status(422).json({ success: false, message: 'Validation failed', errors: errors.array() });
+    return;
+  }
+
   const result = await authService.resendUserVerification(req.user!, req.body.channel);
 
   if (result.success === false) {
@@ -222,6 +277,16 @@ export const sendPhoneOtp = asyncHandler(async (req: AuthRequest, res: Response)
 });
 
 export const verifyPhoneOtp = asyncHandler(async (req: AuthRequest, res: Response) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    res.status(422).json({
+      success: false,
+      message: 'Validation failed',
+      errors: errors.array().map(e => ({ field: (e as any).path, message: e.msg })),
+    });
+    return;
+  }
+
   const otp = (req.body.otp || '').toString().trim();
   const result = await authService.verifyPhoneOtpForUser(req.user!, otp);
 

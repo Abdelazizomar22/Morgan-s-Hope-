@@ -7,10 +7,10 @@ import { sendMessage, getHistory } from '../services/chatService';
 export const handleSendMessage = asyncHandler(async (req: Request, res: Response) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
-    return res.status(400).json({
+    return res.status(422).json({
       success: false,
       message: 'Invalid chat payload',
-      errors: errors.array(),
+      errors: errors.array().map(e => ({ field: (e as any).path, message: e.msg })),
     });
   }
 
