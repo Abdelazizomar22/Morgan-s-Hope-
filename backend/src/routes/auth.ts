@@ -1,3 +1,4 @@
+import crypto from 'crypto';
 import { Router, Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import User from '../models/User';
@@ -36,80 +37,64 @@ const googleRedirect = (status: 'success' | 'error', params: Record<string, stri
   return `${FRONTEND_URL}/login?${search.toString()}`;
 };
 
-const getGoogleCallbackUrl = (req: Request) => {
-  const configured = (process.env.GOOGLE_CALLBACK_URL || '').trim().replace(/^['"]|['"]$/g, '');
-  if (configured) return configured;
+const GOOGLE_CALLBACK_URL = (process.env.GOOGLE_CALLBACK_URL || '').trim().replace(/^['"]|['"]$/g, '');
 
-  const forwardedProto = (req.headers['x-forwarded-proto'] as string | undefined)?.split(',')[0]?.trim();
-  const proto = forwardedProto || req.protocol;
-  const host = req.get('host');
-  return `${proto}://${host}/api/auth/google/callback`;
+const getGoogleCallbackUrl = (_req: Request) => {
+  return GOOGLE_CALLBACK_URL;
 };
 
-router.get('/debug', async (req: Request, res: Response) => {
-  if (process.env.NODE_ENV === 'production') {
-    return res.status(404).json({ success: false, message: 'Not found' });
-  }
-  try {
-    const count = await User.count();
-    const admin = await User.findOne({ where: { email: 'admin@medtech.com' } });
-    const bcrypt = await import('bcryptjs');
-    const testMatch = admin ? await bcrypt.compare('Admin@123456', admin.password) : null;
-    return res.json({
-      success: true,
-      db: 'ok',
-      userCount: count,
-      adminExists: !!admin,
-      adminEmailInDb: admin?.email ?? null,
-      testPasswordMatch: testMatch,
-    });
-  } catch (e: any) {
-    return res.status(500).json({ success: false, dbError: e?.message });
-  }
-});
+const ENABLE_DEBUG = process.env.ENABLE_DEBUG_ROUTES === 'true' && process.env.NODE_ENV !== 'production';
 
-router.get('/dev-setup', async (req: Request, res: Response) => {
-  if (process.env.NODE_ENV === 'production') {
-    return res.status(404).json({ success: false, message: 'Not found' });
-  }
-  const email = 'admin@medtech.com';
-  const password = 'Admin@123456';
-  const hashed = await bcrypt.hash(password, 12);
-  let user = await User.findOne({ where: { email } });
-  if (!user) {
-    user = await User.create({
-      firstName: 'Admin',
-      lastName: 'MedTech',
-      email,
-      password: hashed,
-      role: 'admin',
-    });
-    return res.json({
-      success: true,
-      message: 'Admin user created. Use these credentials to log in.',
-      email,
-      password,
-    });
-  }
-  user.password = hashed;
-  await user.save();
-  return res.json({
-    success: true,
-    message: 'Admin password reset. Use these credentials to log in.',
-    email,
-    password,
+if (ENABLE_DEBUG) {
+  router.get('/debug', async (_req: Request, res: Response) => {
+    try {
+      const count = await User.count();
+      return res.json({ success: true, db: 'ok', userCount: count });
+    } catch (e: any) {
+      return res.status(500).json({ success: false, dbError: e?.message });
+    }
   });
-});
+
+  router.get('/dev-setup', async (_req: Request, res: Response) => {
+    const email = 'admin@medtech.com';
+    const password = crypto.randomUUID().slice(0, 16);
+    const hashed = await bcrypt.hash(password, 12);
+    let user = await User.findOne({ where: { email } });
+    if (!user) {
+      user = await User.create({
+        firstName: 'Admin',
+        lastName: 'MedTech',
+        email,
+        password: hashed,
+        role: 'admin',
+      });
+      return res.json({ success: true, message: 'Admin user created', email, password });
+    }
+    user.password = hashed;
+    await user.save();
+    return res.json({ success: true, message: 'Admin password reset', email, password });
+  });
+}
 
 router.get('/google', (req, res, next) => {
   if (!GOOGLE_CONFIGURED) {
     return res.redirect(googleRedirect('error', { message: 'Google sign-in is not configured yet.' }));
   }
 
+  const state = crypto.randomUUID();
+  res.cookie('google_oauth_state', state, {
+    httpOnly: true,
+    sameSite: 'lax',
+    secure: process.env.NODE_ENV === 'production',
+    maxAge: 10 * 60 * 1000,
+    path: '/',
+  });
+
   return passport.authenticate('google', {
     session: false,
     scope: ['profile', 'email'],
     prompt: 'select_account',
+    state,
     callbackURL: getGoogleCallbackUrl(req),
   } as any)(req, res, next);
 });
@@ -117,6 +102,14 @@ router.get('/google', (req, res, next) => {
 router.get('/google/callback', (req, res, next) => {
   if (!GOOGLE_CONFIGURED) {
     return res.redirect(googleRedirect('error', { message: 'Google sign-in is not configured yet.' }));
+  }
+
+  const storedState = req.cookies?.google_oauth_state;
+  const returnedState = req.query.state as string | undefined;
+  res.clearCookie('google_oauth_state', { path: '/' });
+
+  if (!storedState || !returnedState || storedState !== returnedState) {
+    return res.redirect(googleRedirect('error', { message: 'OAuth state mismatch. Possible CSRF attack.' }));
   }
 
   return passport.authenticate('google', { session: false, callbackURL: getGoogleCallbackUrl(req) } as any, async (error: unknown, user?: InstanceType<typeof User>) => {
