@@ -7,6 +7,7 @@ import { body, validationResult } from 'express-validator';
 import User from '../models/User';
 import { AuthRequest, JWT_SECRET, REFRESH_SECRET } from '../middleware/auth';
 import { asyncHandler } from '../utils/asyncHandler';
+import crypto from 'crypto';
 import { generateOTP, hashOTP, verifyOTP } from '../utils/otp';
 import { sendOTPEmail } from '../utils/mailer';
 
@@ -43,7 +44,11 @@ function makeRefreshToken(id: number, rememberMe = false) {
 const normalizeEmail = (value?: string) => value?.toLowerCase().trim() || '';
 const normalizePhone = (value?: string) => value?.replace(/[^\d+]/g, '').trim() || '';
 const isEmail = (value: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
-const generateVerificationCode = () => Math.floor(100000 + Math.random() * 900000).toString();
+const generateVerificationCode = () => {
+  const arr = new Uint32Array(1);
+  crypto.getRandomValues(arr);
+  return (100000 + (arr[0] % 900000)).toString();
+};
 
 function queueVerification(user: User, channel: 'email' | 'phone') {
   const code = generateVerificationCode();
@@ -119,7 +124,7 @@ export const register = asyncHandler(async (req: Request, res: Response) => {
     age,
     gender,
     smokingHistory,
-    role: req.body.role || 'user',
+    role: 'user',
     acceptedDisclaimer: req.body.acceptedDisclaimer === true,
     onboardingCompleted: false,
     authProvider: 'local',
@@ -163,46 +168,15 @@ export const login = asyncHandler(async (req: Request, res: Response) => {
     ? await User.findOne({ where: { email: normalizedEmail, isActive: true } })
     : null;
 
-  if (!user && process.env.NODE_ENV !== 'production' && normalizedEmail === 'admin@medtech.com' && password === 'Admin@123456') {
-    const hashed = await bcrypt.hash(password, 12);
-    user = await User.create({
-      firstName: 'Admin',
-      lastName: 'MedTech',
-      email: normalizedEmail,
-      password: hashed,
-      role: 'admin',
-      emailVerified: true,
-      acceptedDisclaimer: true,
-      onboardingCompleted: true,
-    });
-  }
-
-  const devHint =
-    process.env.NODE_ENV !== 'production'
-      ? ' Open http://localhost:3000/api/auth/dev-setup in browser to create admin (admin@medtech.com / Admin@123456).'
-      : '';
-
   if (!user) {
-    if (process.env.NODE_ENV !== 'production') {
-      console.warn('[Auth] Login failed: no user with identifier', identifier);
-    }
     await bcrypt.compare(password, '$2b$12$invalidhashplaceholderxxxxxxxxxxxxxxx');
-    res.status(401).json({
-      success: false,
-      message: 'Invalid email or password.' + devHint,
-    });
+    res.status(401).json({ success: false, message: 'Invalid email or password.' });
     return;
   }
 
   const match = await bcrypt.compare(password, user.password);
   if (!match) {
-    if (process.env.NODE_ENV !== 'production') {
-      console.warn('[Auth] Login failed: wrong password for', identifier);
-    }
-    res.status(401).json({
-      success: false,
-      message: 'Invalid email or password.' + devHint,
-    });
+    res.status(401).json({ success: false, message: 'Invalid email or password.' });
     return;
   }
 
@@ -238,7 +212,7 @@ export const refreshToken = asyncHandler(async (req: Request, res: Response) => 
 
   let payload: { id: number; rememberMe?: boolean };
   try {
-    payload = jwt.verify(token, REFRESH_SECRET) as { id: number; rememberMe?: boolean };
+    payload = jwt.verify(token, REFRESH_SECRET, { algorithms: ['HS256'] }) as { id: number; rememberMe?: boolean };
   } catch {
     res.clearCookie(REFRESH_COOKIE, { path: '/' });
     res.status(401).json({ success: false, message: 'Invalid or expired refresh token' });
@@ -286,8 +260,8 @@ export const updateProfile = asyncHandler(async (req: AuthRequest, res: Response
       res.status(400).json({ success: false, message: 'Current password is incorrect' });
       return;
     }
-    if (newPassword.length < 8) {
-      res.status(422).json({ success: false, message: 'New password must be at least 8 characters' });
+    if (newPassword.length < 8 || !/[A-Z]/.test(newPassword) || !/[a-z]/.test(newPassword) || !/[0-9]/.test(newPassword)) {
+      res.status(422).json({ success: false, message: 'New password must be at least 8 characters with uppercase, lowercase, and a number' });
       return;
     }
     user.password = await bcrypt.hash(newPassword, 12);
@@ -363,7 +337,7 @@ export const resendVerification = asyncHandler(async (req: AuthRequest, res: Res
     }
 
     const otp = generateOTP();
-    user.phoneOtpHash = hashOTP(otp);
+    user.phoneOtpHash = hashOTP(otp, user.id);
     user.phoneOtpExpiry = new Date(Date.now() + 10 * 60 * 1000);
     await user.save();
     await sendOTPEmail(user.email, otp);
@@ -405,7 +379,7 @@ export const sendPhoneOtp = asyncHandler(async (req: AuthRequest, res: Response)
   }
 
   const otp = generateOTP();
-  user.phoneOtpHash = hashOTP(otp);
+  user.phoneOtpHash = hashOTP(otp, user.id);
   user.phoneOtpExpiry = new Date(Date.now() + 10 * 60 * 1000);
   await user.save();
   await sendOTPEmail(user.email, otp);
@@ -435,7 +409,7 @@ export const verifyPhoneOtp = asyncHandler(async (req: AuthRequest, res: Respons
     res.status(400).json({ success: false, message: 'Verification code expired.' });
     return;
   }
-  if (!verifyOTP(otp, user.phoneOtpHash)) {
+  if (!verifyOTP(otp, user.phoneOtpHash, user.id)) {
     res.status(400).json({ success: false, message: 'Invalid verification code.' });
     return;
   }
