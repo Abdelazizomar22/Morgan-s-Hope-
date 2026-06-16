@@ -2,6 +2,8 @@ import { Request, Response, NextFunction } from 'express';
 
 const normalizeOrigin = (origin: string) => origin.trim().replace(/^['"]|['"]$/g, '').replace(/\/+$/, '');
 
+const isDev = process.env.NODE_ENV !== 'production';
+
 const envOrigins = [
   process.env.FRONTEND_URLS || '',
   process.env.FRONTEND_URL || '',
@@ -21,12 +23,14 @@ const configuredOrigins = Array.from(
 const vercelPreviewPattern = /^https:\/\/[a-z0-9-]+\.vercel\.app$/i;
 
 function isAllowedOrigin(origin?: string): boolean {
-  if (!origin) return true;
+  if (!origin || isDev) return true;
   const normalized = normalizeOrigin(origin);
   return configuredOrigins.includes(normalized) || vercelPreviewPattern.test(normalized);
 }
 
 export function sameOrigin(req: Request, res: Response, next: NextFunction) {
+  if (isDev) return next();
+
   const origin = req.headers.origin as string | undefined;
   const referer = req.headers.referer as string | undefined;
 
@@ -44,3 +48,4 @@ export function sameOrigin(req: Request, res: Response, next: NextFunction) {
 
   next();
 }
+

@@ -125,3 +125,4 @@ export async function confirmUpload(req: AuthRequest, res: Response): Promise<vo
     data: { id: record.id, secureUrl: record.secureUrl },
   });
 }
+

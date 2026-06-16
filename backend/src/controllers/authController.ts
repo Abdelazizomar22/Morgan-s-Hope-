@@ -1,24 +1,15 @@
 ﻿import { Request, Response } from 'express';
-import bcrypt from 'bcryptjs';
-import jwt from 'jsonwebtoken';
-import fs from 'fs';
-import path from 'path';
 import { body, validationResult } from 'express-validator';
-import User from '../models/User';
-import { AuthRequest, JWT_SECRET, REFRESH_SECRET } from '../middleware/auth';
+import { AuthRequest } from '../middleware/auth';
 import { asyncHandler } from '../utils/asyncHandler';
 import crypto from 'crypto';
 import { generateOTP, hashOTP, verifyOTP } from '../utils/otp';
 import { sendOTPEmail } from '../utils/mailer';
+import * as authService from '../services/authService';
 
-const ACCESS_TOKEN_TTL = '15m';
-const REFRESH_TOKEN_TTL = '7d';
-const REFRESH_TOKEN_LONG_TTL = '30d';
 const REFRESH_COOKIE = 'medtech_refresh';
-const PHONE_EMAIL_DOMAIN = 'phone.morganshope.local';
 
-// â”€â”€ Cookie options â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-function cookieOptions(maxAgeMs: number) {
+const cookieOptions = (maxAgeMs: number) => {
   const isProd = process.env.NODE_ENV === 'production';
   return {
     httpOnly: true,
@@ -56,14 +47,6 @@ function queueVerification(user: User, channel: 'email' | 'phone') {
   user.verificationChannel = channel;
   user.verificationExpiresAt = new Date(Date.now() + 10 * 60 * 1000);
 
-  if (process.env.NODE_ENV !== 'production') {
-    console.log('[Auth] Verification code for ' + channel + ': ' + code);
-  }
-
-  return code;
-}
-
-// â”€â”€ Validators â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export const registerValidators = [
   body('firstName').trim().notEmpty().withMessage('First name is required'),
   body('lastName').trim().notEmpty().withMessage('Last name is required'),
@@ -94,7 +77,40 @@ export const loginValidators = [
   }),
 ];
 
-// â”€â”€ Register â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+export const updateProfileValidators = [
+  body('firstName').optional().trim().notEmpty().withMessage('First name cannot be empty'),
+  body('lastName').optional().trim().notEmpty().withMessage('Last name cannot be empty'),
+  body('phone').optional().trim(),
+  body('age').optional().isInt({ min: 1, max: 150 }).withMessage('Age must be between 1 and 150'),
+  body('gender').optional().isIn(['male', 'female', 'other']).withMessage('Gender must be male, female, or other'),
+  body('newPassword')
+    .optional()
+    .isLength({ min: 8 }).withMessage('New password must be at least 8 characters')
+    .matches(/[A-Z]/).withMessage('New password must contain at least one uppercase letter')
+    .matches(/[a-z]/).withMessage('New password must contain at least one lowercase letter')
+    .matches(/[0-9]/).withMessage('New password must contain at least one number'),
+  body('currentPassword').if(body('newPassword').exists()).notEmpty().withMessage('Current password is required to set a new password'),
+  body('smokingHistory').optional().trim(),
+  body('medicalHistory').optional().trim(),
+];
+
+export const verifyContactValidators = [
+  body('code').notEmpty().withMessage('Verification code is required').isString().trim(),
+];
+
+export const verifyPhoneOtpValidators = [
+  body('otp').notEmpty().withMessage('OTP is required').isString().trim(),
+];
+
+export const resendVerificationValidators = [
+  body('channel').optional().isIn(['email', 'phone']).withMessage('Channel must be email or phone'),
+];
+
+const devHint =
+  process.env.NODE_ENV !== 'production'
+    ? ' Open http://localhost:3000/api/auth/dev-setup in browser to create admin (admin@medtech.com / Admin@123456).'
+    : '';
+
 export const register = asyncHandler(async (req: Request, res: Response) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
@@ -106,44 +122,31 @@ export const register = asyncHandler(async (req: Request, res: Response) => {
     return;
   }
 
-  const email = normalizeEmail(req.body.email);
-  const { firstName, lastName, password, age, gender, smokingHistory } = req.body;
+  const result = await authService.registerUser({
+    firstName: req.body.firstName,
+    lastName: req.body.lastName,
+    email: req.body.email,
+    password: req.body.password,
+    age: req.body.age,
+    gender: req.body.gender,
+    smokingHistory: req.body.smokingHistory,
+    role: req.body.role,
+    acceptedDisclaimer: req.body.acceptedDisclaimer,
+  });
 
-  const existing = await User.findOne({ where: { email } });
-  if (existing) {
-    res.status(409).json({ success: false, message: 'Email already registered' });
+  if (result.success === false) {
+    res.status(409).json({ success: false, message: result.error });
     return;
   }
 
-  const hashed = await bcrypt.hash(password, 12);
-  const user = await User.create({
-    firstName,
-    lastName,
-    email,
-    password: hashed,
-    age,
-    gender,
-    smokingHistory,
-    role: 'user',
-    acceptedDisclaimer: req.body.acceptedDisclaimer === true,
-    onboardingCompleted: false,
-    authProvider: 'local',
-    emailVerified: true,
-    phoneVerified: false,
-  });
-  const accessToken = makeAccessToken(user.id);
-  const refreshToken = makeRefreshToken(user.id);
-
-  res.cookie(REFRESH_COOKIE, refreshToken, cookieOptions(7 * 24 * 60 * 60 * 1000));
-
+  res.cookie(REFRESH_COOKIE, result.data.refreshToken, cookieOptions(7 * 24 * 60 * 60 * 1000));
   res.status(201).json({
     success: true,
     message: 'Account created successfully',
-    data: { user: user.toSafeJSON(), token: accessToken },
+    data: { user: result.data.user, token: result.data.accessToken },
   });
 });
 
-// â”€â”€ Login â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export const login = asyncHandler(async (req: Request, res: Response) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
@@ -156,8 +159,7 @@ export const login = asyncHandler(async (req: Request, res: Response) => {
   }
 
   const identifier = (req.body.identifier || req.body.email || '').toString().trim();
-  const normalizedEmail = normalizeEmail(identifier);
-    const password = (req.body.password || '').toString().trim();
+  const password = (req.body.password || '').toString().trim();
   const rememberMe = req.body.rememberMe;
 
   if (process.env.NODE_ENV !== 'production') {
@@ -180,29 +182,20 @@ export const login = asyncHandler(async (req: Request, res: Response) => {
     return;
   }
 
-  // rememberMe = 7-day access token, else 15 min
-  const accessTTL = rememberMe ? '7d' : ACCESS_TOKEN_TTL;
-  const cookieMaxMs = rememberMe ? 30 * 24 * 60 * 60 * 1000 : 7 * 24 * 60 * 60 * 1000;
-
-  const accessToken = makeAccessToken(user.id, accessTTL);
-  const refreshToken = makeRefreshToken(user.id, Boolean(rememberMe));
-
-  res.cookie(REFRESH_COOKIE, refreshToken, cookieOptions(cookieMaxMs));
+  res.cookie(REFRESH_COOKIE, result.data.refreshToken, cookieOptions(result.data.cookieMaxMs));
 
   res.json({
     success: true,
     message: 'Login successful',
-    data: { user: user.toSafeJSON(), token: accessToken },
+    data: { user: result.data.user, token: result.data.accessToken },
   });
 });
 
-// â”€â”€ Logout â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export const logout = asyncHandler(async (_req: Request, res: Response) => {
   res.clearCookie(REFRESH_COOKIE, { path: '/' });
   res.json({ success: true, message: 'Logged out successfully' });
 });
 
-// â”€â”€ Refresh Access Token â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export const refreshToken = asyncHandler(async (req: Request, res: Response) => {
   const token = req.cookies?.[REFRESH_COOKIE];
   if (!token) {
@@ -219,33 +212,25 @@ export const refreshToken = asyncHandler(async (req: Request, res: Response) => 
     return;
   }
 
-  const user = await User.findOne({ where: { id: payload.id, isActive: true } });
-  if (!user) {
+  if (result.success === false) {
     res.clearCookie(REFRESH_COOKIE, { path: '/' });
-    res.status(401).json({ success: false, message: 'User not found' });
+    res.status(401).json({ success: false, message: result.error });
     return;
   }
 
-  const rememberMe = payload.rememberMe === true;
-  const newAccessToken = makeAccessToken(user.id, rememberMe ? '7d' : ACCESS_TOKEN_TTL);
-  const newRefreshToken = makeRefreshToken(user.id, rememberMe);
-  const cookieMaxMs = rememberMe ? 30 * 24 * 60 * 60 * 1000 : 7 * 24 * 60 * 60 * 1000;
-
-  res.cookie(REFRESH_COOKIE, newRefreshToken, cookieOptions(cookieMaxMs));
+  res.cookie(REFRESH_COOKIE, result.data.refreshToken, cookieOptions(result.data.cookieMaxMs));
 
   res.json({
     success: true,
     message: 'Token refreshed',
-    data: { token: newAccessToken, user: user.toSafeJSON() },
+    data: { token: result.data.accessToken, user: result.data.user },
   });
 });
 
-// â”€â”€ /me â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export const me = asyncHandler(async (req: AuthRequest, res: Response) => {
   res.json({ success: true, message: 'User retrieved', data: req.user!.toSafeJSON() });
 });
 
-// â”€â”€ Update Profile â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export const updateProfile = asyncHandler(async (req: AuthRequest, res: Response) => {
   const user = req.user!;
   const { firstName, lastName, phone, currentPassword, newPassword, age, gender, smokingHistory, medicalHistory } = req.body;
@@ -267,66 +252,54 @@ export const updateProfile = asyncHandler(async (req: AuthRequest, res: Response
     user.password = await bcrypt.hash(newPassword, 12);
   }
 
-  if (firstName) user.firstName = firstName.trim();
-  if (lastName) user.lastName = lastName.trim();
-  if (phone !== undefined) {
-    const nextPhone = normalizePhone(phone);
-    if (nextPhone !== (user.phone || '')) {
-      user.phone = nextPhone || undefined;
-      user.phoneVerified = false;
-      user.phoneOtpHash = null;
-      user.phoneOtpExpiry = null;
-    }
-  }
-  if (age !== undefined) user.age = age;
-  if (gender !== undefined) user.gender = gender;
-  if (smokingHistory !== undefined) user.smokingHistory = smokingHistory;
-  if (medicalHistory !== undefined) user.medicalHistory = medicalHistory;
-  if (req.body.onboardingCompleted !== undefined) user.onboardingCompleted = req.body.onboardingCompleted === true;
+  const result = await authService.updateUserProfile(req.user!, {
+    firstName: req.body.firstName,
+    lastName: req.body.lastName,
+    phone: req.body.phone,
+    currentPassword: req.body.currentPassword,
+    newPassword: req.body.newPassword,
+    age: req.body.age,
+    gender: req.body.gender,
+    smokingHistory: req.body.smokingHistory,
+    medicalHistory: req.body.medicalHistory,
+    onboardingCompleted: req.body.onboardingCompleted,
+  });
 
-  await user.save();
-  res.json({ success: true, message: 'Profile updated', data: user.toSafeJSON() });
+  if (result.success === false) {
+    const status = result.error === 'Current password is incorrect' ? 400 : 422;
+    res.status(status).json({ success: false, message: result.error });
+    return;
+  }
+
+  res.json({ success: true, message: 'Profile updated', data: result.data });
 });
 
 export const verifyContact = asyncHandler(async (req: AuthRequest, res: Response) => {
-  const user = req.user!;
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    res.status(422).json({
+      success: false,
+      message: 'Validation failed',
+      errors: errors.array().map(e => ({ field: (e as any).path, message: e.msg })),
+    });
+    return;
+  }
+
   const code = (req.body.code || '').toString().trim();
+  const result = await authService.verifyUserContact(req.user!, code);
 
-  if (!user.verificationCode || !user.verificationChannel || !user.verificationExpiresAt) {
-    res.status(400).json({ success: false, message: 'No verification is pending.' });
+  if (result.success === false) {
+    res.status(400).json({ success: false, message: result.error });
     return;
   }
 
-  if (user.verificationExpiresAt.getTime() < Date.now()) {
-    res.status(400).json({ success: false, message: 'Verification code expired.' });
-    return;
-  }
-
-  if (code !== user.verificationCode) {
-    res.status(400).json({ success: false, message: 'Invalid verification code.' });
-    return;
-  }
-
-  if (user.verificationChannel === 'email') user.emailVerified = true;
-  if (user.verificationChannel === 'phone') user.phoneVerified = true;
-  user.verificationCode = null;
-  user.verificationChannel = null;
-  user.verificationExpiresAt = null;
-  await user.save();
-
-  res.json({ success: true, message: 'Contact verified', data: user.toSafeJSON() });
+  res.json({ success: true, message: 'Contact verified', data: result.data });
 });
 
 export const resendVerification = asyncHandler(async (req: AuthRequest, res: Response) => {
-  const user = req.user!;
-  const channel: 'email' | 'phone' = req.body.channel || (user.email && !user.email.endsWith(`@${PHONE_EMAIL_DOMAIN}`) ? 'email' : 'phone');
-
-  if (channel === 'email' && (!user.email || user.email.endsWith(`@${PHONE_EMAIL_DOMAIN}`))) {
-    res.status(400).json({ success: false, message: 'No email address is available for verification.' });
-    return;
-  }
-  if (channel === 'phone' && !user.phone) {
-    res.status(400).json({ success: false, message: 'No phone number is available for verification.' });
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    res.status(422).json({ success: false, message: 'Validation failed', errors: errors.array() });
     return;
   }
 
@@ -353,28 +326,18 @@ export const resendVerification = asyncHandler(async (req: AuthRequest, res: Res
     return;
   }
 
-  const verificationCode = queueVerification(user, channel);
-  await user.save();
-
   res.json({
     success: true,
-    message: `Verification code generated for your ${channel}.`,
-    data: {
-      channel,
-      ...(process.env.NODE_ENV !== 'production' ? { devCode: verificationCode } : {}),
-    },
+    message: `Verification code generated for your ${result.data.channel}.`,
+    data: result.data,
   });
 });
 
 export const sendPhoneOtp = asyncHandler(async (req: AuthRequest, res: Response) => {
-  const user = req.user!;
+  const result = await authService.sendPhoneOtpToUser(req.user!);
 
-  if (!user.phone) {
-    res.status(400).json({ success: false, message: 'Please add your phone number before requesting a verification code.' });
-    return;
-  }
-  if (!user.email || user.email.endsWith(`@${PHONE_EMAIL_DOMAIN}`)) {
-    res.status(400).json({ success: false, message: 'A valid account email is required to deliver the phone verification code.' });
+  if (result.success === false) {
+    res.status(400).json({ success: false, message: result.error });
     return;
   }
 
@@ -387,26 +350,18 @@ export const sendPhoneOtp = asyncHandler(async (req: AuthRequest, res: Response)
   res.json({
     success: true,
     message: 'A phone verification code was sent to your email.',
-    data: {
-      ...(process.env.NODE_ENV !== 'production' ? { devCode: otp } : {}),
-    },
+    data: result.data,
   });
 });
 
 export const verifyPhoneOtp = asyncHandler(async (req: AuthRequest, res: Response) => {
-  const user = req.user!;
-  const otp = (req.body.otp || '').toString().trim();
-
-  if (!otp) {
-    res.status(400).json({ success: false, message: 'Verification code is required.' });
-    return;
-  }
-  if (!user.phoneOtpHash || !user.phoneOtpExpiry) {
-    res.status(400).json({ success: false, message: 'No phone verification code is pending.' });
-    return;
-  }
-  if (user.phoneOtpExpiry.getTime() < Date.now()) {
-    res.status(400).json({ success: false, message: 'Verification code expired.' });
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    res.status(422).json({
+      success: false,
+      message: 'Validation failed',
+      errors: errors.array().map(e => ({ field: (e as any).path, message: e.msg })),
+    });
     return;
   }
   if (!verifyOTP(otp, user.phoneOtpHash, user.id)) {
@@ -414,52 +369,22 @@ export const verifyPhoneOtp = asyncHandler(async (req: AuthRequest, res: Respons
     return;
   }
 
-  user.phoneVerified = true;
-  user.phoneOtpHash = null;
-  user.phoneOtpExpiry = null;
-  await user.save();
-
-  res.json({ success: true, message: 'Phone verified successfully.', data: user.toSafeJSON() });
+  res.json({ success: true, message: 'Phone verified successfully.', data: result.data });
 });
 
-// â”€â”€ Upload Avatar â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export const uploadAvatar = asyncHandler(async (req: AuthRequest, res: Response) => {
-  const user = req.user!;
   if (!req.file) {
     res.status(400).json({ success: false, message: 'No image file provided' });
     return;
   }
 
-  if (req.file.size > 2 * 1024 * 1024) {
-    try {
-      fs.unlinkSync(req.file.path);
-    } catch { }
-    res.status(413).json({ success: false, message: 'Avatar image must be 2MB or smaller' });
+  const result = await authService.uploadUserAvatar(req.user!, req.file);
+
+  if (result.success === false) {
+    res.status(413).json({ success: false, message: result.error });
     return;
   }
 
-  const imageBuffer = fs.readFileSync(req.file.path);
-  const mimeType = req.file.mimetype || 'image/png';
-  const dataUri = `data:${mimeType};base64,${imageBuffer.toString('base64')}`;
-
-  if (user.profilePicture && !/^https?:\/\//i.test(user.profilePicture) && !user.profilePicture.startsWith('data:')) {
-    try {
-      const uploadsRoot = process.env.UPLOAD_DIR || 'uploads';
-      const uploadPath = path.isAbsolute(uploadsRoot)
-        ? uploadsRoot
-        : path.join(process.cwd(), uploadsRoot);
-      const oldPath = path.join(uploadPath, user.profilePicture);
-      if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
-    } catch { }
-  }
-
-  user.profilePicture = dataUri;
-  await user.save();
-
-  try {
-    fs.unlinkSync(req.file.path);
-  } catch { }
-
-  res.json({ success: true, message: 'Profile picture updated', data: user.toSafeJSON() });
+  res.json({ success: true, message: 'Profile picture updated', data: result.data });
 });
 
