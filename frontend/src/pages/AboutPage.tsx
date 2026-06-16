@@ -179,6 +179,26 @@ export function AboutPage({ lang }: AboutPageProps) {
           </div>
         </div>
 
+        {/* Section 4 — Graduation Project */}
+        <div style={{ background: 'var(--bg-main)', padding: isMobile ? '42px 20px 58px' : '70px 40px 90px' }}>
+          <MotionFade direction="up" delay={0.2}>
+            <div style={{ maxWidth: 980, margin: '0 auto', background: 'var(--card-bg)', border: '1px solid var(--card-border)', borderRadius: 22, padding: isMobile ? 24 : 34, boxShadow: '0 14px 36px var(--shadow-main)', textAlign: ar ? 'right' : 'left' }}>
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, borderRadius: 999, background: 'color-mix(in srgb, var(--primary) 10%, var(--card-bg))', color: 'var(--primary-dark)', padding: '7px 14px', fontSize: 11, fontWeight: 900, textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 16 }}>
+                {t('Graduation Project', 'مشروع تخرج')}
+              </div>
+              <h2 style={{ fontSize: isMobile ? 24 : 30, fontWeight: 900, color: 'var(--primary-dark)', margin: '0 0 14px', letterSpacing: -0.5 }}>
+                {t('Built With Purpose', 'بُني بهدف واضح')}
+              </h2>
+              <p style={{ color: 'var(--hero-text-2)', fontSize: isMobile ? 14 : 15.5, lineHeight: 1.85, margin: '0 0 14px' }}>
+                {t("Morgan's Hope is a graduation project at the Higher Institute of Computer Science & Information Systems. The original idea, website experience, and smart chatbot were created by Abdelaziz Omar.", "Morgan's Hope هو مشروع تخرج في المعهد العالي لعلوم الحاسب ونظم المعلومات. صاحب فكرة المشروع وتجربة الموقع والشات بوت الذكي هو عبد العزيز عمر.")}
+              </p>
+              <p style={{ color: 'var(--text-muted)', fontSize: isMobile ? 13 : 14, lineHeight: 1.75, margin: 0 }}>
+                {t('The long-term vision is to grow from CT and X-Ray support into a wider AI-assisted chest screening platform that can handle more scan types and more chest diseases while keeping medical review at the center.', 'الرؤية طويلة المدى هي التوسع من دعم CT و X-Ray إلى منصة أوسع لفحص أمراض الصدر بالذكاء الاصطناعي، تستقبل أنواع أشعة أكثر وتغطي أمراض صدر أكثر، مع بقاء مراجعة الطبيب في مركز القرار الطبي.')}
+              </p>
+            </div>
+          </MotionFade>
+        </div>
+
         <style>{`
           @import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&family=Cairo:wght@400;600;700;800;900&display=swap');
         `}</style>

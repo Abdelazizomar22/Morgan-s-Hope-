@@ -17,7 +17,7 @@ export const REAL_HOSPITALS = [
     googleMaps: 'https://www.google.com/maps/search/?api=1&query=30.0626,31.2497',
     coordinates: { lat: 30.0626, lng: 31.2497 },
     beds: '750+', established: '1969', type: 'Government',
-    services: ['Lung Cancer', 'Chemotherapy', 'Radiation', 'Surgery', 'Bone Marrow'],
+    services: ['CT Lung Cancer Classes', 'Potential Malignancy Findings', 'Lung Cancer', 'Chemotherapy', 'Radiation', 'Surgery', 'Bone Marrow'],
     badge: 'Largest in Egypt', badgeColor: '#dc3545',
   },
   {
@@ -38,7 +38,7 @@ export const REAL_HOSPITALS = [
     googleMaps: 'https://www.google.com/maps/search/?api=1&query=30.0776,31.3187',
     coordinates: { lat: 30.0776, lng: 31.3187 },
     beds: '500+', established: '1948', type: 'Government',
-    services: ['Lung Cancer', 'CT Biopsy', 'Chemotherapy', 'Radiation', 'Palliative Care'],
+    services: ['CT Lung Cancer Classes', 'Potential Malignancy Findings', 'Lung Cancer', 'CT Biopsy', 'Chemotherapy', 'Radiation', 'Palliative Care'],
     badge: 'University Hospital', badgeColor: '#0056b3',
   },
   {
@@ -59,7 +59,7 @@ export const REAL_HOSPITALS = [
     googleMaps: 'https://www.google.com/maps/search/?api=1&query=30.0589,31.2248',
     coordinates: { lat: 30.0589, lng: 31.2248 },
     beds: '300+', established: '1999', type: 'Private',
-    services: ['VATS Surgery', 'PET-CT', 'Immunotherapy', 'Targeted Therapy', 'Palliative Care'],
+    services: ['Potential Malignancy Findings', 'Cardiac Conditions', 'VATS Surgery', 'PET-CT', 'Immunotherapy', 'Targeted Therapy', 'Palliative Care'],
     badge: 'JCI Accredited', badgeColor: '#16a34a',
   },
   {
@@ -80,7 +80,7 @@ export const REAL_HOSPITALS = [
     googleMaps: 'https://www.google.com/maps/search/?api=1&query=27.1783,31.1859',
     coordinates: { lat: 27.1783, lng: 31.1859 },
     beds: '280+', established: '1997', type: 'Government',
-    services: ['Lung Cancer', 'Chemotherapy', 'Radiation', 'Nuclear Medicine', 'Surgery'],
+    services: ['CT Lung Cancer Classes', 'Potential Malignancy Findings', 'Lung Cancer', 'Chemotherapy', 'Radiation', 'Nuclear Medicine', 'Surgery'],
     badge: 'Serves Upper Egypt', badgeColor: '#6f42c1',
   },
   {
@@ -101,7 +101,7 @@ export const REAL_HOSPITALS = [
     googleMaps: 'https://www.google.com/maps/search/?api=1&query=31.0409,31.3785',
     coordinates: { lat: 31.0409, lng: 31.3785 },
     beds: '320+', established: '1985', type: 'Government',
-    services: ['Bronchoscopy', 'CT Biopsy', 'Chemotherapy', 'Radiation', 'Surgery'],
+    services: ['CT Lung Cancer Classes', 'Potential Malignancy Findings', 'Lung Cancer', 'Bronchoscopy', 'CT Biopsy', 'Chemotherapy', 'Radiation', 'Surgery'],
     badge: 'Delta Region Leader', badgeColor: '#2c7da0',
   },
   {
@@ -122,7 +122,7 @@ export const REAL_HOSPITALS = [
     googleMaps: 'https://www.google.com/maps/search/?api=1&query=31.1975,29.8925',
     coordinates: { lat: 31.1975, lng: 29.8925 },
     beds: '400+', established: '1942', type: 'Government',
-    services: ['Thoracic Surgery', 'Pulmonology', 'Chemotherapy', 'Radiation', 'Endoscopy'],
+    services: ['Pulmonary Infection', 'COPD-related Findings', 'Fibrotic Lung Disease', 'Pleural Diseases', 'TB Evaluation', 'Potential Malignancy Findings', 'Thoracic Surgery', 'Pulmonology', 'Chemotherapy', 'Radiation', 'Endoscopy'],
     badge: 'North Egypt', badgeColor: '#0d3b2e',
   },
   {
@@ -143,7 +143,7 @@ export const REAL_HOSPITALS = [
     googleMaps: 'https://www.google.com/maps/search/?api=1&query=30.0613,31.3419',
     coordinates: { lat: 30.0613, lng: 31.3419 },
     beds: '380+', established: '1981', type: 'Private',
-    services: ['PET-CT', 'MRI', 'Tumor Board', 'Chemotherapy', 'Immunotherapy'],
+    services: ['Potential Malignancy Findings', 'Cardiac Conditions', 'PET-CT', 'MRI', 'Tumor Board', 'Chemotherapy', 'Immunotherapy'],
     badge: 'Private Excellence', badgeColor: '#fd7e14',
   },
   {
@@ -164,7 +164,7 @@ export const REAL_HOSPITALS = [
     googleMaps: 'https://www.google.com/maps/search/?api=1&query=30.0338,31.2304',
     coordinates: { lat: 30.0338, lng: 31.2304 },
     beds: '1200+', established: '1837', type: 'Government',
-    services: ['Thoracic Surgery', 'Pulmonology', 'CT Scan', 'Biopsy', 'Chemotherapy'],
+    services: ['Pulmonary Infection', 'COPD-related Findings', 'Fibrotic Lung Disease', 'Pleural Diseases', 'TB Evaluation', 'Potential Malignancy Findings', 'Thoracic Surgery', 'Pulmonology', 'CT Scan', 'Biopsy', 'Chemotherapy'],
     badge: 'Est. 1837', badgeColor: '#343a40',
   },
 ];

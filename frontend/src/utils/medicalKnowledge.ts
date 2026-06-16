@@ -9,6 +9,20 @@ export interface KnowledgeEntry {
 
 export const MEDICAL_KNOWLEDGE: KnowledgeEntry[] = [
     {
+        keywords: ['abdelaziz', 'owner', 'founder', 'creator', 'graduation project', 'who made', 'who built', 'عبد العزيز', 'صاحب الموقع', 'صاحب الفكرة', 'مشروع تخرج', 'مين عمل'],
+        responses: {
+            en: "### **About the Project**\n\nMorgan's Hope is a graduation project at the Higher Institute of Computer Science & Information Systems. The website, chatbot, and original idea were created by **Abdelaziz Omar**.\n\nThe platform is built to support early chest screening with AI, explain results clearly, and guide users toward appropriate medical follow-up while reminding them that AI is not a final diagnosis.",
+            ar: "### **عن المشروع**\n\nMorgan's Hope هو مشروع تخرج في المعهد العالي لعلوم الحاسب ونظم المعلومات. صاحب فكرة المشروع ومن قام ببناء الموقع والشات بوت هو **عبد العزيز عمر**.\n\nالمنصة هدفها دعم الفحص المبكر لأمراض الصدر بالذكاء الاصطناعي، وتوضيح النتائج للمستخدم، وتوجيهه للمتابعة الطبية المناسبة، مع التأكيد أن الذكاء الاصطناعي ليس تشخيصاً نهائياً."
+        }
+    },
+    {
+        keywords: ['future vision', 'vision', 'roadmap', 'all chest diseases', 'all scans', 'future', 'الرؤية المستقبلية', 'رؤيتنا', 'كل امراض الصدر', 'كل أنواع الأشعة', 'المستقبل'],
+        responses: {
+            en: "### **Morgan's Hope Future Vision**\n\nOur current scope is Chest CT and Chest X-Ray, but the long-term vision is broader: Morgan's Hope aims to become a complete chest-disease screening platform that can support all major chest conditions detectable from medical imaging and eventually accept more imaging types beyond CT and X-Ray.\n\nThe goal is to make early screening clearer, faster, and more accessible while keeping physician review at the center of every medical decision.",
+            ar: "### **الرؤية المستقبلية لـ Morgan's Hope**\n\nالنطاق الحالي هو CT للصدر والأشعة السينية للصدر، لكن الرؤية طويلة المدى أكبر: نسعى لأن تصبح Morgan's Hope منصة متكاملة لفحص جميع أمراض الصدر الممكن اكتشافها من خلال الأشعة، وأن تستقبل مستقبلاً أنواع أشعة أكثر من CT و X-Ray فقط.\n\nالهدف هو جعل الفحص المبكر أوضح وأسرع وأسهل وصولاً، مع بقاء مراجعة الطبيب جزءاً أساسياً من أي قرار طبي."
+        }
+    },
+    {
         keywords: ['platform', 'supported scans', 'scan types', 'what do you support', 'ct scan', 'x-ray', 'xray', 'cxr', 'features', 'models', 'المنصة', 'أنواع الأشعة', 'الاشعة المدعومة', 'الموديلات', 'بتدعم ايه'],
         responses: {
             en: "### **Morgan's Hope Current AI Coverage**\n\nMorgan's Hope supports **Chest CT** and **Chest X-Ray** screening.\n\n**Chest CT:** the existing CT lung-cancer classifier remains unchanged and covers: Normal, Benign, Adenocarcinoma, Large Cell Carcinoma, Squamous Cell Carcinoma, and Malignant General.\n\n**Chest X-Ray:** the old binary CXR model has been removed. The current CXR direction screens broader clinical groups: Pulmonary Infection, COPD-related Findings, Fibrotic Lung Disease, Cardiac Conditions, Potential Malignancy Findings, and Pleural Diseases. A dedicated TB signal can also be used when the TB model is available.\n\nThis is AI screening support only, not a final diagnosis.",

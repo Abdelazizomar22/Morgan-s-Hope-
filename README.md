@@ -2,7 +2,7 @@
 
 Morgan's Hope is an AI-assisted medical screening platform for chest imaging. It helps users upload chest CT scans or chest X-ray images, receive structured AI-supported screening results, review their history, understand recommended next steps, and find oncology/chest-care hospitals in Egypt.
 
-The platform is built as a graduation project and is designed for clinical decision support and education. It is not a replacement for a qualified physician, radiologist, oncologist, or an official medical diagnosis.
+The platform is built as a graduation project at the Higher Institute of Computer Science & Information Systems and is designed for clinical decision support and education. It is not a replacement for a qualified physician, radiologist, oncologist, or an official medical diagnosis.
 
 ## Current Screening Scope
 
@@ -35,6 +35,16 @@ The current CXR clinical groups are:
 - Pleural Diseases
 
 The CXR service is also prepared for an optional TB signal, allowing a dedicated tuberculosis classifier to run alongside the multi-disease CXR classifier when the model artifact is available.
+
+## Future Vision
+
+Morgan's Hope is starting with chest CT and chest X-ray, but the long-term vision is to become a complete AI-assisted chest-disease screening platform. The goal is to support all major chest conditions that can be detected from medical imaging and eventually accept more imaging types beyond CT and X-ray.
+
+The platform should grow toward broader respiratory, pulmonary, pleural, cardiac-related chest findings, and other clinically relevant chest-imaging pathways while keeping physician review as the final authority.
+
+## Academic Context
+
+Morgan's Hope is a graduation project at the Higher Institute of Computer Science & Information Systems.
 
 ## AI Pipeline
 
@@ -80,7 +90,7 @@ Morgan's Hope provides AI-assisted screening support only. Results are informati
 Use this for the repository About section:
 
 ```text
-AI-assisted chest CT and X-ray screening platform for lung cancer and major chest disease groups, with hospital guidance and a medical assistant.
+Graduation project from the Higher Institute of Computer Science & Information Systems for AI-assisted chest CT and X-ray screening, covering lung cancer and major chest disease groups with hospital guidance and a medical assistant.
 ```
 
 Recommended website:
@@ -114,4 +124,4 @@ medical-ai, chest-xray, ct-scan, lung-cancer, tuberculosis, healthcare, fastapi,
 
 ## Questions
 
-For questions about the project, please reach out to **Abdelaziz**.
+For questions about the project, please reach out to the project maintainers.

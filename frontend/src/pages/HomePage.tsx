@@ -395,7 +395,7 @@ export default function HomePage({ lang }: HomePageProps) {
                 {t('Chest CT + X-Ray Disease Screening', 'فحص أمراض الصدر عبر CT و X-Ray')}
               </h2>
               <p style={{ color: '#eee', fontSize: 14, lineHeight: 1.8, margin: '0 0 26px', maxWidth: 640 }}>
-                {t("Morgan's Hope keeps the existing CT lung-cancer classifier and replaces the old binary CXR model with a broader chest X-Ray clinical-group pipeline covering major respiratory and chest findings.", "يحافظ Morgan's Hope على موديل CT الحالي لتصنيف سرطان الرئة، ويستبدل موديل الأشعة السينية الثنائي القديم بمسار أوسع يصنف مجموعات أمراض وملاحظات الصدر الرئيسية.")}
+                {t("Morgan's Hope keeps the existing CT lung-cancer classifier and replaces the old binary CXR model with a broader Chest X-Ray clinical-group pipeline. Our future vision is to support all major chest diseases detectable from medical imaging and accept more scan types beyond CT and X-Ray.", "يحافظ Morgan's Hope على موديل CT الحالي لتصنيف سرطان الرئة، ويستبدل موديل الأشعة السينية الثنائي القديم بمسار أوسع يصنف مجموعات أمراض وملاحظات الصدر الرئيسية. رؤيتنا المستقبلية هي دعم جميع أمراض الصدر الممكن اكتشافها من خلال الأشعة واستقبال أنواع أشعة أكثر من CT و X-Ray.")}
               </p>
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                 {[

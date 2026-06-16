@@ -17,6 +17,22 @@ const TYPE_OPTIONS: { label: string; value: HospitalType }[] = [
   { label: 'Private', value: 'Private' },
 ];
 
+const PLATFORM_SPECIALIZATION_ORDER = [
+  'CT Lung Cancer Classes',
+  'Potential Malignancy Findings',
+  'Pulmonary Infection',
+  'COPD-related Findings',
+  'Fibrotic Lung Disease',
+  'Pleural Diseases',
+  'TB Evaluation',
+  'Cardiac Conditions',
+  'Lung Cancer',
+  'Pulmonology',
+  'Thoracic Surgery',
+  'CT Biopsy',
+  'Bronchoscopy',
+];
+
 const normalize = (value: string) => value.trim().toLowerCase();
 
 const splitParam = (value: string | null) =>
@@ -153,7 +169,19 @@ export default function HospitalsPage({ lang }: HospitalsPageProps) {
 
   const allCities = useMemo(() => Array.from(new Set(REAL_HOSPITALS.map((hospital) => hospital.city))), []);
   const allSpecializations = useMemo(
-    () => Array.from(new Set(REAL_HOSPITALS.flatMap((hospital) => [hospital.specialization, ...hospital.services]))).sort(),
+    () => {
+      const values = Array.from(new Set(REAL_HOSPITALS.flatMap((hospital) => [hospital.specialization, ...hospital.services])));
+      return values.sort((a, b) => {
+        const aIndex = PLATFORM_SPECIALIZATION_ORDER.indexOf(a);
+        const bIndex = PLATFORM_SPECIALIZATION_ORDER.indexOf(b);
+
+        if (aIndex !== -1 || bIndex !== -1) {
+          return (aIndex === -1 ? Number.MAX_SAFE_INTEGER : aIndex) - (bIndex === -1 ? Number.MAX_SAFE_INTEGER : bIndex);
+        }
+
+        return a.localeCompare(b);
+      });
+    },
     [],
   );
 
@@ -230,9 +258,9 @@ export default function HospitalsPage({ lang }: HospitalsPageProps) {
       <section className="bg-[#1B4D3E] bg-[url('/images/common/upper-section.jpeg')] bg-cover bg-center bg-no-repeat">
         <div className="bg-[#0B2F27]/70">
           <div className="mx-auto max-w-[1180px] px-4 py-12 sm:px-6 lg:px-8">
-            <h1 className="text-3xl font-black text-white">Oncology Centers in Egypt</h1>
+            <h1 className="text-3xl font-black text-white">Chest & Oncology Centers in Egypt</h1>
             <p className="mt-2 text-sm font-semibold text-white/80">
-              8 real hospitals - verified contact info, websites & booking links
+              Follow-up centers mapped to Morgan's Hope CT and X-Ray screening outputs
             </p>
           </div>
         </div>
@@ -309,7 +337,7 @@ export default function HospitalsPage({ lang }: HospitalsPageProps) {
                 {filtered.length} {t('hospitals found', 'hospitals found')}
               </p>
               <span className="rounded-full bg-[#1B4D3E]/10 px-3 py-1 text-xs font-black text-[#1B4D3E]">
-                Egypt Oncology Network
+                Chest & Oncology Follow-up Network
               </span>
             </div>
 

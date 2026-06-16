@@ -128,7 +128,7 @@ export default function HospitalFilters({
           ))}
         </FilterSection>
 
-        <FilterSection title="Specialization">
+        <FilterSection title="Clinical Need / Expertise">
           {specializationOptions.map((option) => (
             <CheckboxRow
               key={option.value}
